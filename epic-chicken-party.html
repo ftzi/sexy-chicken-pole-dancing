@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔥 EPIC Pole Dancing Chicken Party 🔥</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bungee&display=swap');
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Bungee', cursive;
+            cursor: crosshair;
+        }
+        
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            z-index: 100;
+            text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+            user-select: none;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 3em;
+            background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00, #ff00ff);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient 2s ease infinite, pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .controls {
+            margin-top: 10px;
+            font-size: 1.2em;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        
+        #musicControl {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+        
+        .music-btn {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-family: 'Bungee', cursive;
+            cursor: pointer;
+            border-radius: 50px;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+            transition: all 0.3s;
+        }
+        
+        .music-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
+        }
+        
+        #danceMove {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4em;
+            color: #ffff00;
+            text-shadow: 0 0 30px #ffff00;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 200;
+        }
+        
+        @keyframes showMove {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(-180deg); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.5) rotate(180deg); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(2) rotate(360deg); }
+        }
+        
+        .show-move {
+            animation: showMove 1s ease-out;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>🔥 EPIC CHICKEN PARTY 🔥</h1>
+        <div class="controls">
+            🎮 MOUSE: Camera | CLICK: Special Move | SPACE: Super Mode | 1-5: Dance Styles
+        </div>
+    </div>
+    
+    <div id="danceMove"></div>
+    
+    <div id="musicControl">
+        <button class="music-btn" onclick="toggleMusic()">🎵 BLAST THE MUSIC! 🎵</button>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.158.0/build/three.module.js"
+        }
+    }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        
+        // Global variables
+        let scene, camera, renderer;
+        let chickenGroup, discoGroup;
+        let spotLights = [];
+        let laserBeams = [];
+        let fireworks = [];
+        let crowd = [];
+        let neonLights = [];
+        let sparkles = [];
+        let musicAnalyser, musicData;
+        let bassIntensity = 0;
+        let currentDanceStyle = 0;
+        let superMode = false;
+        let specialMoveTime = 0;
+        let specialMove = false;
+        
+        // Audio setup
+        let audioContext, audioElement, audioSource, analyser;
+        let isPlaying = false;
+        
+        window.toggleMusic = function() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create oscillators for funky music
+                createFunkyMusic();
+            }
+            
+            if (isPlaying) {
+                audioContext.suspend();
+                document.querySelector('.music-btn').textContent = '🎵 BLAST THE MUSIC! 🎵';
+            } else {
+                audioContext.resume();
+                document.querySelector('.music-btn').textContent = '🔇 PAUSE THE PARTY 🔇';
+            }
+            isPlaying = !isPlaying;
+        }
+        
+        function createFunkyMusic() {
+            // Create multiple oscillators for a funky beat
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = 0.3;
+            gainNode.connect(audioContext.destination);
+            
+            // Bass line
+            function createBassLine() {
+                const bass = audioContext.createOscillator();
+                const bassGain = audioContext.createGain();
+                bass.type = 'sawtooth';
+                bass.frequency.value = 55; // Low A
+                
+                bassGain.gain.setValueAtTime(0, audioContext.currentTime);
+                bassGain.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+                bassGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                bass.connect(bassGain);
+                bassGain.connect(gainNode);
+                bass.start(audioContext.currentTime);
+                bass.stop(audioContext.currentTime + 0.5);
+            }
+            
+            // Kick drum
+            function createKick() {
+                const kick = audioContext.createOscillator();
+                const kickGain = audioContext.createGain();
+                
+                kick.frequency.setValueAtTime(150, audioContext.currentTime);
+                kick.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                kickGain.gain.setValueAtTime(0.7, audioContext.currentTime);
+                kickGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                kick.connect(kickGain);
+                kickGain.connect(gainNode);
+                kick.start(audioContext.currentTime);
+                kick.stop(audioContext.currentTime + 0.5);
+            }
+            
+            // Hi-hat
+            function createHiHat() {
+                const hiHat = audioContext.createOscillator();
+                const hiHatGain = audioContext.createGain();
+                const hiHatFilter = audioContext.createBiquadFilter();
+                
+                hiHat.type = 'square';
+                hiHat.frequency.value = 8000;
+                
+                hiHatFilter.type = 'highpass';
+                hiHatFilter.frequency.value = 7000;
+                
+                hiHatGain.gain.setValueAtTime(0.1, audioContext.currentTime);
+                hiHatGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+                
+                hiHat.connect(hiHatFilter);
+                hiHatFilter.connect(hiHatGain);
+                hiHatGain.connect(gainNode);
+                hiHat.start(audioContext.currentTime);
+                hiHat.stop(audioContext.currentTime + 0.05);
+            }
+            
+            // Create the beat pattern
+            let beatCount = 0;
+            setInterval(() => {
+                if (isPlaying) {
+                    if (beatCount % 4 === 0) {
+                        createKick();
+                        createBassLine();
+                        bassIntensity = 1;
+                    }
+                    if (beatCount % 2 === 0) {
+                        createHiHat();
+                    }
+                    beatCount++;
+                }
+            }, 125); // 120 BPM
+        }
+        
+        // Scene setup
+        scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.02);
+        
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 8, 20);
+        camera.lookAt(0, 5, 0);
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.5;
+        document.body.appendChild(renderer.domElement);
+
+        // Enhanced lighting
+        const ambientLight = new THREE.AmbientLight(0x0a0a0a, 0.5);
+        scene.add(ambientLight);
+        
+        // Create multiple colored spotlights
+        const colors = [0xff00ff, 0x00ffff, 0xffff00, 0xff0088, 0x00ff88, 0x8800ff];
+        for (let i = 0; i < 6; i++) {
+            const spotLight = new THREE.SpotLight(colors[i], 3);
+            const angle = (i / 6) * Math.PI * 2;
+            spotLight.position.set(Math.cos(angle) * 15, 20, Math.sin(angle) * 15);
+            spotLight.castShadow = true;
+            spotLight.angle = Math.PI / 4;
+            spotLight.penumbra = 0.5;
+            spotLight.decay = 2;
+            spotLight.distance = 50;
+            scene.add(spotLight);
+            spotLight.target.position.set(0, 0, 0);
+            scene.add(spotLight.target);
+            spotLights.push(spotLight);
+        }
+
+        // Neon floor with reflection
+        const floorGeometry = new THREE.CircleGeometry(15, 64);
+        const floorMaterial = new THREE.MeshPhysicalMaterial({ 
+            color: 0x111111,
+            metalness: 0.9,
+            roughness: 0.1,
+            envMapIntensity: 1,
+            emissive: 0x222222,
+            emissiveIntensity: 0.5
+        });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+        
+        // Add neon grid lines on floor
+        const gridHelper = new THREE.GridHelper(30, 30, 0xff00ff, 0x00ffff);
+        gridHelper.position.y = 0.01;
+        scene.add(gridHelper);
+
+        // Chrome pole with glow
+        const poleGroup = new THREE.Group();
+        
+        const poleGeometry = new THREE.CylinderGeometry(0.2, 0.2, 15, 32);
+        const poleMaterial = new THREE.MeshPhysicalMaterial({ 
+            color: 0xffffff,
+            metalness: 1,
+            roughness: 0,
+            envMapIntensity: 2,
+            emissive: 0xff00ff,
+            emissiveIntensity: 0.2
+        });
+        const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+        pole.position.y = 7.5;
+        pole.castShadow = true;
+        poleGroup.add(pole);
+        
+        // Glowing pole rings
+        for (let i = 0; i < 5; i++) {
+            const ringGeometry = new THREE.TorusGeometry(0.3, 0.05, 8, 32);
+            const ringMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x00ffff,
+                emissive: 0x00ffff,
+                emissiveIntensity: 1
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.y = 2 + i * 3;
+            ring.rotation.x = Math.PI / 2;
+            poleGroup.add(ring);
+        }
+        
+        scene.add(poleGroup);
+
+        // EPIC Chicken creation with more details
+        chickenGroup = new THREE.Group();
+        
+        // Glowing body
+        const bodyGeometry = new THREE.SphereGeometry(2, 32, 32);
+        const bodyMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xffaa00,
+            shininess: 100,
+            emissive: 0xff6600,
+            emissiveIntensity: 0.2
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.scale.set(1, 1.3, 0.9);
+        body.castShadow = true;
+        chickenGroup.add(body);
+        
+        // Head with sunglasses
+        const headGeometry = new THREE.SphereGeometry(1, 32, 32);
+        const headMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xffcc00,
+            emissive: 0xffaa00,
+            emissiveIntensity: 0.1
+        });
+        const head = new THREE.Mesh(headGeometry, headMaterial);
+        head.position.set(0, 2, 0);
+        head.castShadow = true;
+        chickenGroup.add(head);
+        
+        // Sunglasses
+        const glassGeometry = new THREE.BoxGeometry(0.6, 0.3, 0.1);
+        const glassMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0x000000,
+            shininess: 200
+        });
+        const leftGlass = new THREE.Mesh(glassGeometry, glassMaterial);
+        leftGlass.position.set(-0.4, 2, 0.9);
+        chickenGroup.add(leftGlass);
+        
+        const rightGlass = new THREE.Mesh(glassGeometry, glassMaterial);
+        rightGlass.position.set(0.4, 2, 0.9);
+        chickenGroup.add(rightGlass);
+        
+        const bridge = new THREE.Mesh(
+            new THREE.BoxGeometry(0.3, 0.1, 0.1),
+            glassMaterial
+        );
+        bridge.position.set(0, 2, 0.9);
+        chickenGroup.add(bridge);
+        
+        // Glowing beak
+        const beakGeometry = new THREE.ConeGeometry(0.4, 0.8, 12);
+        const beakMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xff6600,
+            emissive: 0xff3300,
+            emissiveIntensity: 0.5
+        });
+        const beak = new THREE.Mesh(beakGeometry, beakMaterial);
+        beak.position.set(0, 2, 1);
+        beak.rotation.x = Math.PI / 2;
+        chickenGroup.add(beak);
+        
+        // Mohawk crest
+        for (let i = 0; i < 7; i++) {
+            const spikeGeometry = new THREE.ConeGeometry(0.3, 1.2 - i * 0.1, 8);
+            const spikeMaterial = new THREE.MeshPhongMaterial({ 
+                color: new THREE.Color().setHSL(i / 7, 1, 0.5),
+                emissive: new THREE.Color().setHSL(i / 7, 1, 0.5),
+                emissiveIntensity: 0.5
+            });
+            const spike = new THREE.Mesh(spikeGeometry, spikeMaterial);
+            spike.position.set(0, 3.2 - i * 0.15, -0.5 + i * 0.2);
+            spike.rotation.x = -0.3;
+            chickenGroup.add(spike);
+        }
+        
+        // Muscular wings
+        const wingGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+        const wingMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xff8800,
+            emissive: 0xff4400,
+            emissiveIntensity: 0.2
+        });
+        
+        const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+        leftWing.position.set(-1.8, 0.5, 0);
+        leftWing.scale.set(0.7, 1.5, 0.4);
+        leftWing.rotation.z = -0.3;
+        leftWing.name = 'leftWing';
+        chickenGroup.add(leftWing);
+        
+        const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+        rightWing.position.set(1.8, 0.5, 0);
+        rightWing.scale.set(0.7, 1.5, 0.4);
+        rightWing.rotation.z = 0.3;
+        rightWing.name = 'rightWing';
+        chickenGroup.add(rightWing);
+        
+        // Glowing tail feathers
+        for (let i = 0; i < 5; i++) {
+            const tailGeometry = new THREE.ConeGeometry(0.6, 2, 12);
+            const tailMaterial = new THREE.MeshPhongMaterial({ 
+                color: new THREE.Color().setHSL(0.1 * i, 1, 0.5),
+                emissive: new THREE.Color().setHSL(0.1 * i, 1, 0.5),
+                emissiveIntensity: 0.3
+            });
+            const tail = new THREE.Mesh(tailGeometry, tailMaterial);
+            tail.position.set(-0.6 + i * 0.3, 0.8, -1.5);
+            tail.rotation.x = -Math.PI / 3 + i * 0.1;
+            tail.scale.set(0.8, 1, 0.4);
+            chickenGroup.add(tail);
+        }
+        
+        // Buff legs with chains
+        const legGeometry = new THREE.CylinderGeometry(0.2, 0.25, 2, 16);
+        const legMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xffaa00,
+            emissive: 0xff8800,
+            emissiveIntensity: 0.1
+        });
+        
+        const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+        leftLeg.position.set(-0.7, -2, 0);
+        leftLeg.name = 'leftLeg';
+        chickenGroup.add(leftLeg);
+        
+        const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+        rightLeg.position.set(0.7, -2, 0);
+        rightLeg.name = 'rightLeg';
+        chickenGroup.add(rightLeg);
+        
+        // Gold chains
+        for (let leg of [leftLeg, rightLeg]) {
+            const chainGeometry = new THREE.TorusGeometry(0.4, 0.05, 8, 16);
+            const chainMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xffd700,
+                emissive: 0xffd700,
+                emissiveIntensity: 0.3,
+                shininess: 200
+            });
+            const chain = new THREE.Mesh(chainGeometry, chainMaterial);
+            chain.position.y = 0.5;
+            leg.add(chain);
+        }
+        
+        // Platform shoes
+        const shoeGeometry = new THREE.BoxGeometry(0.8, 0.3, 1);
+        const shoeMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xff00ff,
+            emissive: 0xff00ff,
+            emissiveIntensity: 0.3
+        });
+        
+        const leftShoe = new THREE.Mesh(shoeGeometry, shoeMaterial);
+        leftShoe.position.set(-0.7, -3.2, 0.2);
+        chickenGroup.add(leftShoe);
+        
+        const rightShoe = new THREE.Mesh(shoeGeometry, shoeMaterial);
+        rightShoe.position.set(0.7, -3.2, 0.2);
+        chickenGroup.add(rightShoe);
+        
+        chickenGroup.position.y = 6;
+        scene.add(chickenGroup);
+
+        // MEGA Disco ball with mirrors
+        discoGroup = new THREE.Group();
+        const discoGeometry = new THREE.SphereGeometry(2, 32, 32);
+        const discoMaterial = new THREE.MeshPhysicalMaterial({ 
+            color: 0xffffff,
+            metalness: 1,
+            roughness: 0,
+            envMapIntensity: 3
+        });
+        const discoBall = new THREE.Mesh(discoGeometry, discoMaterial);
+        
+        // Add mirror tiles
+        for (let i = 0; i < 100; i++) {
+            const tileGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.05);
+            const tileMaterial = new THREE.MeshPhongMaterial({ 
+                color: new THREE.Color().setHSL(Math.random(), 1, 0.5),
+                emissive: new THREE.Color().setHSL(Math.random(), 1, 0.5),
+                emissiveIntensity: 0.5,
+                shininess: 200
+            });
+            const tile = new THREE.Mesh(tileGeometry, tileMaterial);
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
+            tile.position.setFromSphericalCoords(2, phi, theta);
+            tile.lookAt(0, 0, 0);
+            discoBall.add(tile);
+        }
+        
+        discoGroup.add(discoBall);
+        discoGroup.position.set(0, 16, 0);
+        scene.add(discoGroup);
+
+        // Laser beams
+        function createLaserBeam() {
+            const laserGeometry = new THREE.CylinderGeometry(0.05, 0.05, 30, 8);
+            const laserMaterial = new THREE.MeshPhongMaterial({ 
+                color: new THREE.Color().setHSL(Math.random(), 1, 0.5),
+                emissive: new THREE.Color().setHSL(Math.random(), 1, 0.5),
+                emissiveIntensity: 1,
+                transparent: true,
+                opacity: 0.8
+            });
+            const laser = new THREE.Mesh(laserGeometry, laserMaterial);
+            laser.position.set(
+                (Math.random() - 0.5) * 20,
+                15,
+                (Math.random() - 0.5) * 20
+            );
+            laser.rotation.z = Math.random() * Math.PI;
+            laser.rotation.x = Math.random() * Math.PI;
+            scene.add(laser);
+            laserBeams.push(laser);
+        }
+        
+        for (let i = 0; i < 10; i++) {
+            createLaserBeam();
+        }
+
+        // Sparkle particles
+        const sparkleGeometry = new THREE.BufferGeometry();
+        const sparkleCount = 2000;
+        const sparklePositions = new Float32Array(sparkleCount * 3);
+        const sparkleColors = new Float32Array(sparkleCount * 3);
+        
+        for(let i = 0; i < sparkleCount * 3; i += 3) {
+            sparklePositions[i] = (Math.random() - 0.5) * 40;
+            sparklePositions[i + 1] = Math.random() * 20;
+            sparklePositions[i + 2] = (Math.random() - 0.5) * 40;
+            
+            const color = new THREE.Color().setHSL(Math.random(), 1, 0.5);
+            sparkleColors[i] = color.r;
+            sparkleColors[i + 1] = color.g;
+            sparkleColors[i + 2] = color.b;
+        }
+        
+        sparkleGeometry.setAttribute('position', new THREE.BufferAttribute(sparklePositions, 3));
+        sparkleGeometry.setAttribute('color', new THREE.BufferAttribute(sparkleColors, 3));
+        
+        const sparkleMaterial = new THREE.PointsMaterial({
+            size: 0.2,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+        const sparkleSystem = new THREE.Points(sparkleGeometry, sparkleMaterial);
+        scene.add(sparkleSystem);
+        sparkles.push(sparkleSystem);
+
+        // Crowd silhouettes
+        for (let i = 0; i < 20; i++) {
+            const crowdGeometry = new THREE.ConeGeometry(0.5, 2, 8);
+            const crowdMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x000000,
+                emissive: new THREE.Color().setHSL(Math.random(), 1, 0.2),
+                emissiveIntensity: 0.5
+            });
+            const person = new THREE.Mesh(crowdGeometry, crowdMaterial);
+            const angle = (i / 20) * Math.PI * 2;
+            person.position.set(
+                Math.cos(angle) * 12,
+                1,
+                Math.sin(angle) * 12
+            );
+            person.lookAt(0, 5, 0);
+            scene.add(person);
+            crowd.push(person);
+        }
+
+        // Fireworks system
+        class Firework {
+            constructor() {
+                this.particles = [];
+                this.group = new THREE.Group();
+                this.exploded = false;
+                this.life = 100;
+                
+                // Launch particle
+                const launchGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+                const launchMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0xffff00,
+                    emissive: 0xffff00,
+                    emissiveIntensity: 1
+                });
+                this.launch = new THREE.Mesh(launchGeometry, launchMaterial);
+                this.launch.position.set(
+                    (Math.random() - 0.5) * 20,
+                    0,
+                    (Math.random() - 0.5) * 20
+                );
+                this.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.2,
+                    1 + Math.random() * 0.5,
+                    (Math.random() - 0.5) * 0.2
+                );
+                this.group.add(this.launch);
+                scene.add(this.group);
+            }
+            
+            update() {
+                if (!this.exploded) {
+                    this.launch.position.add(this.velocity);
+                    this.velocity.y -= 0.02;
+                    
+                    if (this.velocity.y < 0) {
+                        this.explode();
+                    }
+                } else {
+                    this.life--;
+                    this.particles.forEach(p => {
+                        p.position.add(p.userData.velocity);
+                        p.userData.velocity.multiplyScalar(0.98);
+                        p.userData.velocity.y -= 0.01;
+                        p.material.opacity = this.life / 100;
+                    });
+                    
+                    if (this.life <= 0) {
+                        this.group.parent.remove(this.group);
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            explode() {
+                this.exploded = true;
+                this.group.remove(this.launch);
+                
+                const color = new THREE.Color().setHSL(Math.random(), 1, 0.5);
+                for (let i = 0; i < 50; i++) {
+                    const particleGeometry = new THREE.SphereGeometry(0.1, 4, 4);
+                    const particleMaterial = new THREE.MeshPhongMaterial({ 
+                        color: color,
+                        emissive: color,
+                        emissiveIntensity: 1,
+                        transparent: true
+                    });
+                    const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                    particle.position.copy(this.launch.position);
+                    particle.userData.velocity = new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.5,
+                        (Math.random() - 0.5) * 0.5,
+                        (Math.random() - 0.5) * 0.5
+                    );
+                    this.particles.push(particle);
+                    this.group.add(particle);
+                }
+            }
+        }
+
+        // Animation variables
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetX = 0;
+        let targetY = 0;
+        const danceStyles = ['BREAKDANCE', 'TWERK', 'MOONWALK', 'ROBOT', 'SALSA'];
+
+        // Event handlers
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        document.addEventListener('click', () => {
+            specialMove = true;
+            specialMoveTime = 0;
+            showDanceMove('SPIN ATTACK!');
+            
+            // Create explosion of particles
+            for (let i = 0; i < 20; i++) {
+                fireworks.push(new Firework());
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+                superMode = !superMode;
+                showDanceMove(superMode ? 'SUPER MODE!' : 'NORMAL MODE');
+            }
+            
+            if (event.key >= '1' && event.key <= '5') {
+                currentDanceStyle = parseInt(event.key) - 1;
+                showDanceMove(danceStyles[currentDanceStyle]);
+            }
+        });
+
+        function showDanceMove(text) {
+            const moveDiv = document.getElementById('danceMove');
+            moveDiv.textContent = text;
+            moveDiv.classList.remove('show-move');
+            void moveDiv.offsetWidth; // Trigger reflow
+            moveDiv.classList.add('show-move');
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            
+            // Update bass intensity decay
+            bassIntensity *= 0.95;
+            
+            // Camera movement
+            targetX = mouseX * 8;
+            targetY = mouseY * 3;
+            
+            camera.position.x += (targetX - camera.position.x) * 0.05;
+            camera.position.y += (targetY + 8 - camera.position.y) * 0.05;
+            camera.lookAt(0, 5, 0);
+            
+            // Disco ball rotation with bass
+            discoGroup.rotation.y = time * 0.5;
+            discoGroup.scale.setScalar(1 + bassIntensity * 0.2);
+            
+            // Spotlight animations
+            spotLights.forEach((light, i) => {
+                const angle = time * 2 + (i / spotLights.length) * Math.PI * 2;
+                light.position.x = Math.cos(angle) * 15;
+                light.position.z = Math.sin(angle) * 15;
+                light.intensity = 3 + bassIntensity * 5;
+                light.color.setHSL((time * 0.1 + i * 0.1) % 1, 1, 0.5);
+            });
+            
+            // Laser beam animations
+            laserBeams.forEach((laser, i) => {
+                laser.rotation.y = time * (1 + i * 0.1);
+                laser.rotation.z = Math.sin(time * 2 + i) * 0.5;
+                laser.material.opacity = 0.3 + Math.sin(time * 5 + i) * 0.3 + bassIntensity * 0.4;
+            });
+            
+            // Get chicken parts
+            const leftWing = chickenGroup.getObjectByName('leftWing');
+            const rightWing = chickenGroup.getObjectByName('rightWing');
+            const leftLeg = chickenGroup.getObjectByName('leftLeg');
+            const rightLeg = chickenGroup.getObjectByName('rightLeg');
+            
+            // Chicken dance animations based on style
+            if (specialMove) {
+                specialMoveTime += 0.15;
+                chickenGroup.rotation.y = specialMoveTime * 8;
+                chickenGroup.position.y = 6 + Math.sin(specialMoveTime * 3) * 3;
+                chickenGroup.position.x = Math.sin(time * 5) * 2;
+                
+                if (leftWing) leftWing.rotation.z = -Math.PI/2 + Math.sin(specialMoveTime * 10) * 0.5;
+                if (rightWing) rightWing.rotation.z = Math.PI/2 - Math.sin(specialMoveTime * 10) * 0.5;
+                
+                if (specialMoveTime > Math.PI * 2) {
+                    specialMove = false;
+                    specialMoveTime = 0;
+                }
+            } else {
+                // Different dance styles
+                switch(currentDanceStyle) {
+                    case 0: // Breakdance
+                        chickenGroup.rotation.y = time * 4;
+                        chickenGroup.rotation.x = Math.sin(time * 3) * 0.2;
+                        chickenGroup.position.y = 6 + Math.abs(Math.sin(time * 4)) * 4;
+                        break;
+                    case 1: // Twerk
+                        chickenGroup.rotation.y = Math.sin(time * 2) * 0.5;
+                        chickenGroup.rotation.z = Math.sin(time * 8) * 0.1;
+                        chickenGroup.position.y = 6 + Math.sin(time * 8) * 0.5;
+                        break;
+                    case 2: // Moonwalk
+                        chickenGroup.position.x = Math.sin(time) * 3;
+                        chickenGroup.position.z = Math.cos(time) * 3;
+                        chickenGroup.rotation.y = -time * 2;
+                        chickenGroup.position.y = 6;
+                        break;
+                    case 3: // Robot
+                        const beat = Math.floor(time * 4) / 4;
+                        chickenGroup.rotation.y = beat * Math.PI / 2;
+                        chickenGroup.position.y = 6 + (Math.floor(time * 8) % 2) * 2;
+                        break;
+                    case 4: // Salsa
+                        chickenGroup.rotation.y = Math.sin(time * 3) * 0.5;
+                        chickenGroup.position.x = Math.sin(time * 2) * 2;
+                        chickenGroup.position.y = 6 + Math.sin(time * 6) * 1;
+                        break;
+                    default:
+                        chickenGroup.rotation.y = time * 2;
+                        chickenGroup.position.y = 6 + Math.sin(time * 2) * 3;
+                }
+                
+                // Wing flapping with bass
+                if (leftWing) leftWing.rotation.z = -0.3 + Math.sin(time * 5) * 0.3 + bassIntensity * 0.5;
+                if (rightWing) rightWing.rotation.z = 0.3 - Math.sin(time * 5) * 0.3 - bassIntensity * 0.5;
+                
+                // Leg movement
+                if (leftLeg) leftLeg.rotation.x = Math.sin(time * 4) * 0.3;
+                if (rightLeg) rightLeg.rotation.x = -Math.sin(time * 4) * 0.3;
+            }
+            
+            // Super mode effects
+            if (superMode) {
+                chickenGroup.scale.setScalar(1.2 + Math.sin(time * 10) * 0.1);
+                chickenGroup.children.forEach(child => {
+                    if (child.material && child.material.emissiveIntensity !== undefined) {
+                        child.material.emissiveIntensity = 0.5 + Math.sin(time * 20) * 0.5;
+                    }
+                });
+            } else {
+                chickenGroup.scale.setScalar(1);
+            }
+            
+            // Crowd jumping
+            crowd.forEach((person, i) => {
+                person.position.y = 1 + Math.abs(Math.sin(time * 4 + i * 0.5)) * 2 * bassIntensity;
+                person.rotation.y = Math.sin(time * 2 + i) * 0.2;
+            });
+            
+            // Sparkle animation
+            sparkles.forEach(system => {
+                system.rotation.y = time * 0.1;
+                system.material.opacity = 0.5 + bassIntensity * 0.5;
+            });
+            
+            // Update fireworks
+            fireworks = fireworks.filter(fw => !fw.update());
+            
+            // Random firework launch
+            if (Math.random() < 0.02 && fireworks.length < 10) {
+                fireworks.push(new Firework());
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+        
+        console.log('🔥 EPIC CHICKEN PARTY LOADED! 🔥');
+    </script>
+</body>
+</html>
